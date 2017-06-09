@@ -4,11 +4,12 @@ In this example we use AVFoundation to continuously get image data from the back
 
 
 ## Setup
-To run this project, you need to download a pre-trained VGG16 model (I couldn't add it here because the size of the file is more than 500mb) and you can do it by running the `setup.sh` on the root folder. This will download the pre-trained model from apple's website.
+To run this project, you need to download a pre-trained VGG16 model (I couldn't add it here because the file is larger than 100mb) and you can do it by running the `setup.sh` on the root folder. This will download the pre-trained model from apple's website.
 
 
 ```shell
-brew install wget
+git clone https://github.com/alaphao/CoreMLExample.git
+cd CoreMLExample
 ./setup.sh
 ```
 
