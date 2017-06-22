@@ -111,7 +111,8 @@ extension ViewController: AVCapturePhotoCaptureDelegate {
         guard let photoBuffer = photoSampleBuffer else { return }
         guard let imageData = AVCapturePhotoOutput.jpegPhotoDataRepresentation(forJPEGSampleBuffer: photoBuffer, previewPhotoSampleBuffer: previewPhotoSampleBuffer) else { return }
         guard let image = UIImage(data: imageData) else { return }
-        guard let img = resize(image: image, newSize: CGSize(width: 224/2.0, height: 224/2.0)) else { return }
+        let screenScale = UIScreen.main.scale
+        guard let img = resize(image: image, newSize: CGSize(width: 224/screenScale, height: 224/screenScale)) else { return }
         let pixelBuffer = pixelBufferFromImage(image: img)
         
         guard let vggOutput = try? model.prediction(image: pixelBuffer) else {
