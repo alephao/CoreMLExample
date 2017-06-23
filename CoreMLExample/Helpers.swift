@@ -2,10 +2,7 @@ import UIKit
 
 func pixelBufferFromImage(image: UIImage) -> CVPixelBuffer {
     
-    let screenScale = UIScreen.main.scale
-    let newImage = resize(image: image, newSize: CGSize(width: 224/screenScale, height: 224/screenScale))
-    
-    let ciimage = CIImage(image: newImage!)
+    let ciimage = CIImage(image: image)
     let tmpcontext = CIContext(options: nil)
     let cgimage =  tmpcontext.createCGImage(ciimage!, from: ciimage!.extent)
     
