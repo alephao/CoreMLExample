@@ -17,6 +17,16 @@ final class ViewController: UIViewController {
     fileprivate let titleLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 24, weight: UIFont.Weight.bold)
+        label.numberOfLines = 2
+        label.textColor = .white
+        label.textAlignment = .center
+        label.shadowColor = .black
+        label.shadowOffset = CGSize(width: 1, height: 1)
+        return label
+    }()
+    fileprivate let probLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 24, weight: UIFont.Weight.bold)
         label.textColor = .white
         label.textAlignment = .center
         label.shadowColor = .black
@@ -29,6 +39,15 @@ final class ViewController: UIViewController {
     var photoOutput: AVCapturePhotoOutput?
     var previewLayer: AVCaptureVideoPreviewLayer?
     
+    let probNumberFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.alwaysShowsDecimalSeparator = true
+        formatter.maximumSignificantDigits = 3
+        formatter.multiplier = 100
+        formatter.positiveSuffix = "%"
+        return formatter
+    }()
+    
     let model = VGG16()
     
     override var prefersStatusBarHidden: Bool {
@@ -40,6 +59,7 @@ final class ViewController: UIViewController {
         super.viewDidLoad()
         view.addSubview(previewView)
         view.addSubview(titleLabel)
+        view.addSubview(probLabel)
         setupConstraints()
         setupCamera()
     }
@@ -54,11 +74,20 @@ final class ViewController: UIViewController {
         view.addConstraints(previewViewHConstraints)
         view.addConstraints(previewViewVConstraints)
         
+        // probLabel Constraints
+        probLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        let probLabelHConstraints = NSLayoutConstraint.constraints(withVisualFormat: "H:|-16-[probLabel]-16-|", options: .init(rawValue: 0), metrics: nil, views: ["probLabel":probLabel])
+        let probLabelBottomConstraint = NSLayoutConstraint(item: probLabel, attribute: .bottom, relatedBy: .equal, toItem: view, attribute: .bottom, multiplier: 1.0, constant: -20)
+        
+        view.addConstraints(probLabelHConstraints)
+        view.addConstraint(probLabelBottomConstraint)
+        
         // titleLabel Constraints
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         
-        let titleLabelHConstraints = NSLayoutConstraint.constraints(withVisualFormat: "H:|-16-[label]-16-|", options: .init(rawValue: 0), metrics: nil, views: ["label":titleLabel])
-        let titleLabelBottomConstraint = NSLayoutConstraint(item: titleLabel, attribute: .bottom, relatedBy: .equal, toItem: view, attribute: .bottom, multiplier: 1.0, constant: -20)
+        let titleLabelHConstraints = NSLayoutConstraint.constraints(withVisualFormat: "H:|-16-[titleLabel]-16-|", options: .init(rawValue: 0), metrics: nil, views: ["titleLabel":titleLabel])
+        let titleLabelBottomConstraint = NSLayoutConstraint(item: titleLabel, attribute: .bottom, relatedBy: .equal, toItem: probLabel, attribute: .top, multiplier: 1.0, constant: -8)
         
         view.addConstraints(titleLabelHConstraints)
         view.addConstraint(titleLabelBottomConstraint)
@@ -120,10 +149,13 @@ extension ViewController: AVCapturePhotoCaptureDelegate {
             return
         }
         
-        OperationQueue.main.addOperation { [unowned self] in
-            self.titleLabel.text = vggOutput.classLabel
+        DispatchQueue.main.async { [unowned self] in
+            let classLabel = vggOutput.classLabel
+            let classLabelProb = vggOutput.classLabelProbs[classLabel] ?? 0.0
+            let formattedProb = self.probNumberFormatter.string(from: NSNumber(value: classLabelProb)) ?? ""
+            self.titleLabel.text = classLabel
+            self.probLabel.text = "Prob: \(formattedProb)"
         }
         
     }
 }
-
