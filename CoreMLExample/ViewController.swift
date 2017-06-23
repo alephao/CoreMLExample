@@ -95,10 +95,11 @@ final class ViewController: UIViewController {
     
     // Setup camera
     private func setupCamera() {
-        // Capture session
+        // Setup capture session
         captureSession = AVCaptureSession()
         captureSession!.sessionPreset = AVCaptureSession.Preset.photo
         
+        // Get back camera or crash!
         guard let backCamera = AVCaptureDevice.default(for: AVMediaType.video) else { fatalError("Couldn't get AVCaptureDevice") }
         
         do {
@@ -130,28 +131,52 @@ final class ViewController: UIViewController {
         Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
             guard let `self` = self else { return }
             let photoSettings = AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg, AVVideoCompressionPropertiesKey: [AVVideoQualityKey: 1.0]])
-            photoOutput?.capturePhoto(with: photoSettings, delegate: self)
+            self.photoOutput?.capturePhoto(with: photoSettings, delegate: self)
         }
     }
 }
 
+// MARK: - AVCapturePhotoCaptureDelegate
 extension ViewController: AVCapturePhotoCaptureDelegate {
-    func photoOutput(_ captureOutput: AVCapturePhotoOutput, didFinishProcessingPhoto photoSampleBuffer: CMSampleBuffer?, previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?, resolvedSettings: AVCaptureResolvedPhotoSettings, bracketSettings: AVCaptureBracketedStillImageSettings?, error: Error?) {
-        guard let photoBuffer = photoSampleBuffer else { return }
-        guard let imageData = AVCapturePhotoOutput.jpegPhotoDataRepresentation(forJPEGSampleBuffer: photoBuffer, previewPhotoSampleBuffer: previewPhotoSampleBuffer) else { return }
-        guard let image = UIImage(data: imageData) else { return }
+    func photoOutput(_ captureOutput: AVCapturePhotoOutput,
+                     didFinishProcessingPhoto photoSampleBuffer: CMSampleBuffer?,
+                     previewPhoto previewPhotoSampleBuffer: CMSampleBuffer?,
+                     resolvedSettings: AVCaptureResolvedPhotoSettings,
+                     bracketSettings: AVCaptureBracketedStillImageSettings?,
+                     error: Error?)
+    {
+        // Get UIImage from the buffer
+        guard
+            let photoBuffer = photoSampleBuffer,
+            let imageData = AVCapturePhotoOutput.jpegPhotoDataRepresentation(forJPEGSampleBuffer: photoBuffer, previewPhotoSampleBuffer: previewPhotoSampleBuffer),
+            let image = UIImage(data: imageData)
+            else { return }
+        
+        // MARK: This is where the magic happens
+        // You need to format the UIImage to the correct VGG16 input format
+        // and then call the model.prediction(image:) method
+        
+        // The VGG16 input shape is a 224x224 image, so we need to resize the picture
         let screenScale = UIScreen.main.scale
         guard let img = resize(image: image, newSize: CGSize(width: 224/screenScale, height: 224/screenScale)) else { return }
+        
+        // The model.prediction(image:) function requires a CVPixelBuffer instead of an UIImage
         let pixelBuffer = pixelBufferFromImage(image: img)
         
+        // Get the VGG16 output for the image
         guard let vggOutput = try? model.prediction(image: pixelBuffer) else {
             print("Failed to predict")
             return
         }
         
         DispatchQueue.main.async { [unowned self] in
+            // The guess
             let classLabel = vggOutput.classLabel
+            
+            // The guess accuracy
             let classLabelProb = vggOutput.classLabelProbs[classLabel] ?? 0.0
+            
+            // Format and display on the UI
             let formattedProb = self.probNumberFormatter.string(from: NSNumber(value: classLabelProb)) ?? ""
             self.titleLabel.text = classLabel
             self.probLabel.text = "Prob: \(formattedProb)"
